@@ -1,0 +1,10 @@
+/* Tailwind overrides */
+.bg-primary { background-color: #003366; }
+.text-primary { color: #003366; }
+.bg-success { background-color: #16a34a; }
+input[type=number]::-webkit-inner-spin-button,
+input[type=number]::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; }
+.status-loading { color: #6b7280; font-style: italic; }
+.status-success { color: #16a34a; }
+.status-error   { color: #dc2626; }
+table th, table td { border-bottom: 1px solid #e5e7eb; }
