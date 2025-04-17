@@ -1,137 +1,127 @@
 <!DOCTYPE html>
-<html lang="es">
+<html lang="es" x-data="cotizador()">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width,initial-scale=1">
-  <title>Cotizador TPS MVP</title>
+  <title>Cotizador TPS</title>
   <!-- Tailwind CSS -->
   <script src="https://cdn.tailwindcss.com"></script>
-  <!-- PapaParse & html2pdf -->
-  <script src="https://cdn.jsdelivr.net/npm/papaparse@5.3.2/papaparse.min.js"></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+  <!-- Alpine.js -->
+  <script src="https://unpkg.com/alpinejs@3.x/dist/cdn.min.js" defer></script>
+  <!-- PapaParse & html2pdf.js -->
+  <script src="https://cdn.jsdelivr.net/npm/papaparse@5.3.2/papaparse.min.js" defer></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js" defer></script>
   <link rel="stylesheet" href="style.css">
 </head>
-<body class="bg-gray-100 font-sans p-6">
+<body class="bg-gray-100 text-gray-800">
 
-  <div class="max-w-7xl mx-auto grid lg:grid-cols-5 gap-8">
+  <div class="min-h-screen flex flex-col lg:flex-row">
 
-    <!-- Catálogo -->
-    <section class="lg:col-span-3 bg-white shadow-lg rounded-xl p-6 flex flex-col">
-      <h1 class="text-3xl font-bold mb-6 text-primary">Catálogo de Productos</h1>
-      <div class="flex items-center mb-4 text-sm space-x-3">
-        <span id="loading-status" class="status-loading">Cargando productos…</span>
-        <span id="product-count-info" class="text-gray-600"></span>
+    <!-- Sidebar / Filtros -->
+    <nav class="bg-white shadow-md lg:w-1/4 p-6">
+      <h1 class="text-2xl font-bold text-primary mb-4">TPS Cotizador</h1>
+      <div class="space-y-4">
+        <input x-model="filter.clave" type="text" placeholder="Clave o Producto..."
+               class="block w-full border rounded-lg p-2 focus:outline-none focus:ring-primary">
+        <input x-model="filter.desc" type="text" placeholder="Descripción..."
+               class="block w-full border rounded-lg p-2 focus:outline-none focus:ring-primary">
+        <button @click="applyFilters()"
+                class="w-full bg-primary text-white py-2 rounded-lg font-semibold hover:bg-blue-800">
+          Filtrar
+        </button>
       </div>
-      <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-6">
-        <input id="filter-clave" placeholder="Buscar Clave/Producto" disabled class="border rounded-lg h-10 px-4 focus:ring-primary focus:border-primary text-sm shadow-sm">
-        <input id="filter-descripcion" placeholder="Buscar Descripción" disabled class="border rounded-lg h-10 px-4 focus:ring-primary focus:border-primary text-sm shadow-sm">
-      </div>
-      <div class="overflow-auto border rounded-lg flex-grow shadow-inner">
-        <table class="w-full text-sm table-auto">
-          <thead class="bg-primary text-white">
-            <tr>
-              <th class="px-4 py-2">Producto</th>
-              <th class="px-4 py-2">Descripción</th>
-              <th class="px-4 py-2 text-right">Precio</th>
-              <th class="px-4 py-2 text-center">Cant.</th>
-              <th class="px-4 py-2 text-center">+</th>
-            </tr>
-          </thead>
-          <tbody id="products-body" class="bg-white">
-            <tr><td colspan="5" class="p-6 text-center text-gray-400">Cargando…</td></tr>
-          </tbody>
-        </table>
-      </div>
-      <div class="mt-6 flex justify-between items-center text-sm">
-        <button id="prev-page" class="btn-outline" disabled>&lt; Página anterior</button>
-        <span id="page-info">Página 1 / 1</span>
-        <button id="next-page" class="btn-outline" disabled>Página siguiente &gt;</button>
-      </div>
-    </section>
+    </nav>
 
-    <!-- Cotización -->
-    <aside class="lg:col-span-2 bg-white shadow-lg rounded-xl p-6 flex flex-col">
-      <h2 class="text-3xl font-bold mb-6 text-primary">Resumen de Cotización</h2>
-      <div class="flex-grow overflow-y-auto pr-2 space-y-4">
-        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-          <input id="client-name" placeholder="Nombre del cliente" class="input-field">
-          <input id="quote-date" type="date" class="input-field">
-          <input id="whatsapp-number" placeholder="WhatsApp" class="input-field">
-          <input id="folio" placeholder="Folio (Opc)" class="input-field">
-          <input id="referencia" placeholder="Referencia (Opc)" class="input-field">
-          <input id="operador" placeholder="Operador (Opc)" class="input-field">
-          <input id="client-rfc" placeholder="RFC Cliente (Opc)" class="input-field">
-          <input id="client-dir" placeholder="Dirección (Opc)" class="input-field">
+    <!-- Main Content -->
+    <main class="flex-1 p-6 space-y-8">
+
+      <!-- Catálogo de Productos -->
+      <section>
+        <h2 class="text-xl font-semibold mb-4">Catálogo de Productos</h2>
+        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+          <template x-for="prod in paginatedProducts()" :key="prod.id">
+            <div class="bg-white rounded-lg shadow p-4 flex flex-col justify-between">
+              <div>
+                <h3 class="font-semibold">{{ prod.clave }}</h3>
+                <p class="text-sm text-gray-600 truncate">{{ prod.descripcion }}</p>
+                <p class="mt-2 font-bold text-primary">{{ formatCurrency(prod.precioBase) }}</p>
+              </div>
+              <div class="mt-4 flex items-center">
+                <input type="number" min="1" x-model.number="prod.qty"
+                       class="w-16 border rounded p-1 text-center text-sm" />
+                <button @click="addToQuote(prod)"
+                        class="ml-auto bg-success text-white p-2 rounded-lg hover:bg-green-700">
+                  Añadir
+                </button>
+              </div>
+            </div>
+          </template>
         </div>
-        <textarea id="comentario" rows="3" placeholder="Comentario (Opcional)" class="input-field"></textarea>
-        <div class="text-sm">
-          <label for="price-level" class="font-medium">Nivel de precio:</label>
-          <select id="price-level" class="input-field w-32">
-            <option value="0">Público (0%)</option>
-            <option value="15">Sub-dist. (-15%)</option>
-            <option value="20">Dist. (-20%)</option>
-          </select>
+        <!-- Paginación -->
+        <div class="mt-6 flex justify-center items-center space-x-4">
+          <button @click="prevPage()" :disabled="page===1"
+                  class="btn-outline py-1 px-3 rounded-md">&lt; Anterior</button>
+          <span>Página {{ page }} / {{ totalPages() }}</span>
+          <button @click="nextPage()" :disabled="page===totalPages()"
+                  class="btn-outline py-1 px-3 rounded-md">Siguiente &gt;</button>
         </div>
-        <div class="border rounded-lg min-h-[200px] overflow-auto">
-          <table class="w-full text-sm table-fixed">
-            <thead class="bg-gray-200">
-              <tr>
-                <th class="px-2 py-1">#</th>
-                <th class="px-2 py-1">Clave</th>
-                <th class="px-2 py-1">Descripción</th>
-                <th class="px-2 py-1">Cant</th>
-                <th class="px-2 py-1">UM</th>
-                <th class="px-2 py-1">P.Unit</th>
-                <th class="px-2 py-1">%Desc</th>
-                <th class="px-2 py-1">Importe</th>
-                <th class="px-2 py-1">×</th>
-              </tr>
-            </thead>
-            <tbody id="quote-body">
-              <tr><td colspan="9" class="p-4 text-center text-gray-400">Añade productos…</td></tr>
-            </tbody>
-          </table>
-        </div>
-      </div>
-      <div class="mt-4 space-y-1 text-right font-semibold">
-        <div>Subtotal: <span id="quote-subtotal">$0.00</span></div>
-        <div>IVA (16%): <span id="quote-iva">$0.00</span></div>
-        <div class="text-xl">Total: <span id="quote-total">$0.00</span></div>
-      </div>
-      <div class="mt-6 flex gap-4">
-        <button id="send-whatsapp" class="btn-success flex-1" disabled>WhatsApp</button>
-        <button id="generate-pdf" class="btn-primary flex-1" disabled>Generar PDF</button>
-      </div>
-    </aside>
+      </section>
 
+      <!-- Resumen de Cotización -->
+      <section x-show="quote.length > 0">
+        <h2 class="text-xl font-semibold mb-4">Resumen de Cotización</h2>
+        <div class="bg-white rounded-lg shadow p-4">
+          <div class="overflow-auto mb-4">
+            <table class="w-full text-sm table-auto">
+              <thead class="bg-gray-200">
+                <tr>
+                  <th class="p-2">#</th>
+                  <th class="p-2">Clave</th>
+                  <th class="p-2">Descripción</th>
+                  <th class="p-2">Cant</th>
+                  <th class="p-2">P.Unit</th>
+                  <th class="p-2">Importe</th>
+                  <th class="p-2">×</th>
+                </tr>
+              </thead>
+              <tbody>
+                <template x-for="(item, idx) in quote" :key="item.id">
+                  <tr>
+                    <td class="p-2 text-center">{{ idx+1 }}</td>
+                    <td class="p-2">{{ item.clave }}</td>
+                    <td class="p-2">{{ item.descripcion }}</td>
+                    <td class="p-2 text-center">{{ item.quantity }}</td>
+                    <td class="p-2 text-right">{{ formatCurrency(item.unitPrice) }}</td>
+                    <td class="p-2 text-right">{{ formatCurrency(item.quantity * item.unitPrice) }}</td>
+                    <td class="p-2 text-center">
+                      <button @click="removeFromQuote(item.id)" class="text-red-500">×</button>
+                    </td>
+                  </tr>
+                </template>
+              </tbody>
+            </table>
+          </div>
+          <div class="flex justify-between items-end">
+            <div class="space-y-1 text-right">
+              <div>Subtotal: <span class="font-bold">{{ formatCurrency(subtotal) }}</span></div>
+              <div>IVA (16%): <span class="font-bold">{{ formatCurrency(iva) }}</span></div>
+              <div class="text-lg font-bold">Total: <span>{{ formatCurrency(total) }}</span></div>
+            </div>
+            <div class="flex space-x-4">
+              <button @click="exportWhatsapp()" class="btn-success px-4 py-2 rounded-lg">
+                WhatsApp
+              </button>
+              <button @click="exportPDF()" class="btn-primary px-4 py-2 rounded-lg">
+                PDF
+              </button>
+            </div>
+          </div>
+        </div>
+      </section>
+
+    </main>
   </div>
 
-  <!-- Plantilla PDF oculta -->
-  <div id="pdf-template" class="hidden p-6 bg-white" style="width:210mm;">
-    <h1 style="text-align:center;">COTIZACIÓN TPS</h1>
-    <p><strong>Cliente:</strong> <span id="pdf-client-name"></span></p>
-    <p><strong>Fecha:</strong> <span id="pdf-quote-date"></span></p>
-    <hr>
-    <table style="width:100%; font-size:10pt; border-collapse:collapse;">
-      <thead>
-        <tr>
-          <th style="border:1px solid #000; padding:4px;">#</th>
-          <th style="border:1px solid #000; padding:4px;">Clave</th>
-          <th style="border:1px solid #000; padding:4px;">Descripción</th>
-          <th style="border:1px solid #000; padding:4px;">Cant</th>
-          <th style="border:1px solid #000; padding:4px;">UM</th>
-          <th style="border:1px solid #000; padding:4px;">P.Unit</th>
-          <th style="border:1px solid #000; padding:4px;">Importe</th>
-        </tr>
-      </thead>
-      <tbody id="pdf-quote-body"></tbody>
-    </table>
-    <hr>
-    <p><strong>Subtotal:</strong> <span id="pdf-subtotal"></span></p>
-    <p><strong>IVA (16%):</strong> <span id="pdf-iva"></span></p>
-    <p><strong>Total:</strong> <span id="pdf-total"></span></p>
-  </div>
-
-  <script src="app.js" defer></script>
+  <script src="app.js"></script>
 </body>
 </html>
