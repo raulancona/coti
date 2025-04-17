@@ -1,10 +1,46 @@
-/* Tailwind overrides */
-.bg-primary { background-color: #003366; }
-.text-primary { color: #003366; }
-.bg-success { background-color: #16a34a; }
-input[type=number]::-webkit-inner-spin-button,
-input[type=number]::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; }
+:root {
+  --primary: #003366;
+  --success: #16a34a;
+}
+
+/* Utility classes */
+.text-primary { color: var(--primary); }
+.bg-primary { background-color: var(--primary); }
+.bg-success { background-color: var(--success); }
+
+/* Inputs comunes */
+.input-field {
+  @apply border rounded-lg h-10 px-4 focus:ring-primary focus:border-primary text-sm shadow-sm;
+}
+
+/* Botones */
+.btn-primary {
+  @apply bg-primary text-white font-semibold rounded-lg py-2 hover:bg-blue-900;
+}
+.btn-success {
+  @apply bg-success text-white font-semibold rounded-lg py-2 hover:bg-green-700;
+}
+.btn-outline {
+  @apply border border-gray-300 text-gray-700 rounded-lg py-2 hover:bg-gray-100;
+}
+
+/* Scrollbar ligero */
+::-webkit-scrollbar { width: 6px; height: 6px; }
+::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 3px; }
+
+/* Estados de carga */
 .status-loading { color: #6b7280; font-style: italic; }
-.status-success { color: #16a34a; }
+.status-success { color: var(--success); }
 .status-error   { color: #dc2626; }
-table th, table td { border-bottom: 1px solid #e5e7eb; }
+
+/* Tablas */
+table {
+  border-collapse: collapse;
+}
+th, td {
+  border-bottom: 1px solid #e2e8f0;
+  padding: 8px;
+}
+th {
+  text-align: left;
+}
